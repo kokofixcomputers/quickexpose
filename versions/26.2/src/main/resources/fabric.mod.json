@@ -1,0 +1,27 @@
+{
+	"schemaVersion": 1,
+	"id": "quickexpose",
+	"version": "${version}",
+	"name": "QuickExpose",
+	"description": "One-click LAN tunnel: adds a Quick Expose button to Open to LAN that gives you a public URL instantly.",
+	"authors": ["kokodev"],
+	"contact": {},
+	"license": "CC0-1.0",
+	"icon": "assets/quickexpose/icon.png",
+	"environment": "client",
+	"entrypoints": {
+		"main":    ["cc.kokodev.qe.QuickExpose"],
+		"client":  ["cc.kokodev.qe.client.QuickExposeClient"],
+		"modmenu": ["cc.kokodev.qe.client.QuickExposeModMenu"]
+	},
+	"mixins": [
+		"quickexpose.mixins.json",
+		{ "config": "quickexpose.client.mixins.json", "environment": "client" }
+	],
+	"depends": {
+		"fabricloader": ">=0.19.3",
+		"minecraft": "~26.2",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

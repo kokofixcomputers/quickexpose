@@ -1,0 +1,8 @@
+{
+	"required": true,
+	"package": "cc.kokodev.qe.client.mixin",
+	"compatibilityLevel": "JAVA_21",
+	"client": ["ShareToLanScreenMixin"],
+	"injectors": { "defaultRequire": 1 },
+	"overwrites": { "requireAnnotations": true }
+}

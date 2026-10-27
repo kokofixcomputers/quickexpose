@@ -1,0 +1,9 @@
+{
+	"required": true,
+	"priority": 1100,
+	"package": "cc.kokodev.qe.client.mixin",
+	"compatibilityLevel": "JAVA_25",
+	"client": ["MultiplayerOptionsScreenMixin"],
+	"injectors": { "defaultRequire": 1 },
+	"overwrites": { "requireAnnotations": true }
+}

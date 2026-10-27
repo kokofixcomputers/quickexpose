@@ -1,0 +1,146 @@
+name: Nightly Build
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Go relay ────────────────────────────────────────────────────────────
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: server/go.mod
+
+      - name: Build relay (linux/amd64)
+        working-directory: server
+        run: GOOS=linux GOARCH=amd64 go build -o quickexpose-relay-linux-amd64 .
+
+      - name: Build relay (linux/arm64)
+        working-directory: server
+        run: GOOS=linux GOARCH=arm64 go build -o quickexpose-relay-linux-arm64 .
+
+      # ── Website (separate repo) ──────────────────────────────────────────────
+      - name: Checkout website
+        uses: actions/checkout@v4
+        with:
+          repository: kokofixcomputers/qe-website
+          path: website
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install website deps
+        working-directory: website
+        run: npm ci
+
+      - name: Build website
+        working-directory: website
+        run: npm run build
+
+      - name: Zip website
+        working-directory: website
+        run: zip -r quickexpose-website.zip dist/
+
+      # ── Java 21 mods (1.21.1, 1.21.11) ─────────────────────────────────────
+      - name: Setup Java 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'microsoft'
+
+      - name: Make gradlew executable
+        run: chmod +x gradlew
+
+      - name: Build mod 1.21.1
+        run: ./gradlew build -q
+
+      - name: Build mod 1.21.11
+        working-directory: versions/1.21.11
+        run: ${{ github.workspace }}/gradlew build -q
+
+      # ── Java 25 mods (26.2, 26.3) ───────────────────────────────────────────
+      - name: Setup Java 25
+        uses: actions/setup-java@v4
+        with:
+          java-version: '25'
+          distribution: 'microsoft'
+
+      - name: Build mod 26.2
+        working-directory: versions/26.2
+        run: ${{ github.workspace }}/gradlew build -q
+
+      - name: Build mod 26.3
+        working-directory: versions/26.3
+        run: ${{ github.workspace }}/gradlew build -q
+
+      # ── Collect artifacts ───────────────────────────────────────────────────
+      - name: Collect artifacts
+        run: |
+          mkdir -p release-artifacts
+
+          # relay binaries
+          cp server/quickexpose-relay-linux-amd64 release-artifacts/
+          cp server/quickexpose-relay-linux-arm64 release-artifacts/
+
+          # website archive
+          cp website/quickexpose-website.zip release-artifacts/
+
+          # mod jars (skip sources and dev variants)
+          copy_jars() {
+            for jar in "$1"/build/libs/*.jar; do
+              [[ "$jar" == *-sources* || "$jar" == *-dev* ]] && continue
+              cp "$jar" release-artifacts/
+            done
+          }
+          copy_jars .
+          copy_jars versions/1.21.11
+          copy_jars versions/26.2
+          copy_jars versions/26.3
+
+          echo "── release artifacts ──"
+          ls -lh release-artifacts/
+
+      # ── Update nightly tag to HEAD ──────────────────────────────────────────
+      - name: Update nightly tag
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -f nightly
+          git push -f origin nightly
+
+      # ── Create / update nightly release ────────────────────────────────────
+      - name: Create nightly release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: nightly
+          name: Nightly Build
+          prerelease: true
+          make_latest: false
+          body: |
+            Automated nightly build — commit ${{ github.sha }}
+
+            | Artifact | Description |
+            |---|---|
+            | `quickexpose-relay-linux-amd64` | Go relay server (Ubuntu x86_64) |
+            | `quickexpose-relay-linux-arm64` | Go relay server (ARM64) |
+            | `quickexpose-website.zip` | Built frontend (deploy to any static host) |
+            | `quickexpose-1.0.0.jar` | Fabric mod — Minecraft 1.21.1 |
+            | `quickexpose-1.21.11-1.0.0.jar` | Fabric mod — Minecraft 1.21.11 |
+            | `quickexpose-26.2-1.0.0.jar` | Fabric mod — Minecraft 26.2 |
+            | `quickexpose-26.3-1.0.0.jar` | Fabric mod — Minecraft 26.3 |
+          files: release-artifacts/*
