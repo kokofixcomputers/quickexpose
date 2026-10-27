@@ -38,6 +38,7 @@ jobs:
         with:
           repository: kokofixcomputers/qe-website
           path: website
+          token: ${{ secrets.QE_WEBSITE_TOKEN }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
