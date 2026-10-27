@@ -34,11 +34,11 @@ go build -o relay . || die "Go build failed"
 ok "server/relay built"
 
 step "Building relay (linux/arm64 for deployment)"
-GOOS=linux GOARCH=arm64 go build -o quickexpose-relay-linux-arm64 . || die "Cross-compile failed"
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -o quickexpose-relay-linux-arm64 . || die "Cross-compile failed"
 ok "server/quickexpose-relay-linux-arm64 built"
 
 step "Building relay (linux/amd64 for deployment)"
-GOOS=linux GOARCH=amd64 go build -o quickexpose-relay-linux-amd64 . || die "Cross-compile failed"
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o quickexpose-relay-linux-amd64 . || die "Cross-compile failed"
 ok "server/quickexpose-relay-linux-amd64 built"
 cd "$ROOT"
 
